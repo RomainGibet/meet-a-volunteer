@@ -99,14 +99,20 @@ class ExperienceController extends ApiController
         RestCountriesApi $restCountriesApi
     ): JsonResponse {
         //? Accessing and denormalizing new datas
+       
         $requestContent = $request->request->all();
+        
+        
 
         $normalizer = new ObjectNormalizer(null, new CamelCaseToSnakeCaseNameConverter());
         // @see https://symfony.com/doc/current/components/serializer.html#deserializing-in-an-existing-object
 
         try {
-            // Manually converting ids to objects for relations
+            //? Manually converting ids to objects for relations
             if (!empty($requestContent['volunteeringType'])) {
+
+                //intval() will get the volunteeringType integer (= id, in this case) so we can retrieve the object through repository method find()
+                //and merge it to the request content.
                 $requestContent['volunteeringType'] = $volunteeringTypeRepository->find(intval($requestContent['volunteeringType']));
             } else {
                 unset($requestContent['volunteeringType']);
@@ -126,14 +132,16 @@ class ExperienceController extends ApiController
                 unset($requestContent['thematic']);
             }
 
-            // Creating object
+            //? Creating object
             $newExperience = new Experience();
+
+            //Since our $requestContent is an array we have to denormalize the datas.
             $normalizer->denormalize($requestContent, Experience::class, null, [AbstractNormalizer::OBJECT_TO_POPULATE => $newExperience]);
         } catch (Exception $e) {
             return $this->json("Error bad request", Response::HTTP_BAD_REQUEST);
         }
 
-        //? Validating datas
+        //? Validating datas according to the constraints we set
         $errors = $validator->validate($newExperience);
         $isCountryValid = $restCountriesApi->checkCountry($newExperience->getCountry());
 
@@ -207,6 +215,7 @@ class ExperienceController extends ApiController
         Filesystem $fileSystem,
         RestCountriesApi $restCountriesApi
     ): JsonResponse {
+        dd($request);
         //? Case Experience not found
         if ($experience === null) {return $this->json('Error: Experience not found',Response::HTTP_NOT_FOUND);}
 
